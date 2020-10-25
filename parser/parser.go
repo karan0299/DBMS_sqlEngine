@@ -32,7 +32,7 @@ func (p *parser) parse() (Query, error) {
 
 func (p *parser) doParse() (Query, error) {
 	for {
-		if p.i > len(p.sql) {
+		if p.i >= len(p.sql) {
 			return p.query, p.err
 		}
 
@@ -89,8 +89,8 @@ func (p *parser) doParse() (Query, error) {
 			p.step = stepSelectAggrClosingParens
 		case stepSelectAggrClosingParens:
 			token, leng := p.getToken()
-			if len(token) != 1 || token != "(" {
-				return p.query, fmt.Errorf("at SELECT : expected opening parens")
+			if len(token) != 1 || token != ")" {
+				return p.query, fmt.Errorf("at SELECT : expected closing parens")
 			}
 			p.pop(leng)
 			maybeFrom, leng := p.getToken()
@@ -251,6 +251,7 @@ func (p *parser) doParse() (Query, error) {
 				}
 				currentCondition.Operand2 = quotedValue
 				currentCondition.Operand2IsField = false
+				leng = ln
 			}
 			p.query.Conditions[len(p.query.Conditions)-1] = currentCondition
 			p.pop(leng)
@@ -407,9 +408,9 @@ func (p *parser) getAggToken() (string, int) {
 }
 
 func (p *parser) pop(i int) {
-	if p.i >= len(p.sql) {
-		return
-	}
+	// if p.i >= len(p.sql) {
+	// 	return
+	// }
 
 	p.i = p.i + i
 
@@ -422,7 +423,7 @@ func (p *parser) validate() error {
 		return fmt.Errorf("at WHERE: empty WHERE clause")
 	}
 
-	if p.step == stepWhereAnd || p.step == stepWhereOr {
+	if (p.step == stepWhereAnd || p.step == stepWhereOr) && p.i < len(p.sql) {
 		return fmt.Errorf("at WHERE: no condition after AND/OR")
 	}
 	if p.query.Type == UnknownType {

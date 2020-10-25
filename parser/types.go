@@ -48,7 +48,7 @@ const (
 
 var reservedWords = []string{
 	"(", ")", ">=", "<=", "!=", ",", "=", ">", "<", "SELECT", "INSERT INTO", "VALUES", "UPDATE", "DELETE FROM",
-	"WHERE", "FROM", "SET",
+	"WHERE", "FROM", "SET", "AND", "OR",
 }
 
 var aggFunc = []string{
