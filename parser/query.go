@@ -14,6 +14,7 @@ type Query struct {
 	Fields             []string // Used for SELECT (i.e. SELECTed field names) and INSERT (INSERTEDed field names)
 	ConditionOperators []string //AND or OR
 	AggregateFunc      map[string]string
+	GroupByField       []string
 }
 
 // Type is the type of SQL query, e.g. SELECT/UPDATE

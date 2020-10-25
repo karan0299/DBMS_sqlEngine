@@ -258,8 +258,12 @@ func (p *parser) doParse() (Query, error) {
 			token, _ = p.getToken()
 			if token == "AND" {
 				p.step = stepWhereAnd
-			} else {
+			} else if token == "OR" {
 				p.step = stepWhereOr
+			} else if token == "GROUP BY" {
+				p.step = stepSelectGroupBy
+			} else if token != "" {
+				return p.query, fmt.Errorf("expected AND/OR/Group By")
 			}
 		case stepWhereAnd:
 			token, leng := p.getToken()
@@ -277,6 +281,25 @@ func (p *parser) doParse() (Query, error) {
 			p.query.ConditionOperators = append(p.query.ConditionOperators, "OR")
 			p.pop(leng)
 			p.step = stepWhereField
+		case stepSelectGroupBy:
+			_, leng := p.getToken()
+			p.pop(leng)
+			p.step = stepSelectGroupByField
+		case stepSelectGroupByField:
+			identifier, leng := p.getToken()
+			if !isIdentifierOrAsterisk(identifier) {
+				return p.query, fmt.Errorf("at GROUP BY: expected field to SELECT")
+			}
+			p.pop(leng)
+			p.query.GroupByField = append(p.query.GroupByField, identifier)
+			p.step = stepSelectGroupByComma
+		case stepSelectGroupByComma:
+			token, leng := p.getToken()
+			if token != "," {
+				return p.query, fmt.Errorf("at Group BY: expected comma or FROM")
+			}
+			p.pop(leng)
+			p.step = stepSelectGroupByField
 		case stepInsertFieldsOpeningParens:
 			token, leng := p.getToken()
 			if len(token) != 1 || token != "(" {

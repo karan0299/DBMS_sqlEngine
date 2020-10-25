@@ -44,11 +44,14 @@ const (
 	stepSelectAggrOpenParens
 	stepSelectAggField
 	stepSelectAggrClosingParens
+	stepSelectGroupByField
+	stepSelectGroupBy
+	stepSelectGroupByComma
 )
 
 var reservedWords = []string{
 	"(", ")", ">=", "<=", "!=", ",", "=", ">", "<", "SELECT", "INSERT INTO", "VALUES", "UPDATE", "DELETE FROM",
-	"WHERE", "FROM", "SET", "AND", "OR",
+	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY",
 }
 
 var aggFunc = []string{
