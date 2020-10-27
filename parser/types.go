@@ -47,11 +47,20 @@ const (
 	stepSelectGroupByField
 	stepSelectGroupBy
 	stepSelectGroupByComma
+	stepGroupByHaving
+	stepHavingAggregateFunc
+	stepHavingAggrOpenParens
+	stepHavingAggField
+	stepHavingAggrClosingParens
+	stepHavingOperator
+	stepHavingValue
+	stepHavingAnd
+	stepHavingOr
 )
 
 var reservedWords = []string{
 	"(", ")", ">=", "<=", "!=", ",", "=", ">", "<", "SELECT", "INSERT INTO", "VALUES", "UPDATE", "DELETE FROM",
-	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY",
+	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY", "HAVING",
 }
 
 var aggFunc = []string{
