@@ -260,8 +260,10 @@ func (p *parser) doParse() (Query, error) {
 				p.step = stepWhereAnd
 			} else if token == "OR" {
 				p.step = stepWhereOr
-			} else if token == "GROUP BY" {
+			} else if token == "GROUP BY" && p.query.Type == 1 {
 				p.step = stepSelectGroupBy
+			} else if token != "GROUP BY" && p.query.Type != 1 {
+				return p.query, fmt.Errorf("At GROUP BY : GROUP BY clause is used only with SELECT CLAUSE")
 			} else if token != "" {
 				return p.query, fmt.Errorf("expected AND/OR/Group By")
 			}
@@ -292,14 +294,110 @@ func (p *parser) doParse() (Query, error) {
 			}
 			p.pop(leng)
 			p.query.GroupByField = append(p.query.GroupByField, identifier)
-			p.step = stepSelectGroupByComma
+			maybeHaving, _ := p.getToken()
+			if maybeHaving == "HAVING" {
+				p.step = stepGroupByHaving
+			} else {
+				p.step = stepSelectGroupByComma
+			}
 		case stepSelectGroupByComma:
 			token, leng := p.getToken()
 			if token != "," {
-				return p.query, fmt.Errorf("at Group BY: expected comma or FROM")
+				return p.query, fmt.Errorf("at Group BY: expected comma or HAVING")
 			}
 			p.pop(leng)
 			p.step = stepSelectGroupByField
+		case stepGroupByHaving:
+			_, leng := p.getToken()
+			p.pop(leng)
+			p.step = stepHavingAggregateFunc
+		case stepHavingAggregateFunc:
+			token, leng := p.getAggToken()
+			if strings.ToUpper(token) == "COUNT" || strings.ToUpper(token) == "AVG" || strings.ToUpper(token) == "SUM" {
+				p.step = stepHavingAggrOpenParens
+				p.pop(leng)
+				p.query.HavingConditions = append(p.query.HavingConditions, HavingCondition{OperandAggFunc: strings.ToUpper(token)})
+				p.nextAggFunc = strings.ToUpper(token)
+			} else {
+				return p.query, fmt.Errorf("at HAVING: expected Aggregate function condtion")
+			}
+		case stepHavingAggrOpenParens:
+			token, leng := p.getToken()
+			if len(token) != 1 || token != "(" {
+				return p.query, fmt.Errorf("at HAVING : expected opening parens")
+			}
+			p.pop(leng)
+			p.step = stepHavingAggField
+		case stepHavingAggField:
+			identifier, leng := p.getToken()
+			if !isIdentifierOrAsterisk(identifier) {
+				return p.query, fmt.Errorf("at Having: expected field for Aggregate Function")
+			}
+			p.query.HavingConditions[len(p.query.HavingConditions)-1].OperandField1 = identifier
+			p.pop(leng)
+			p.step = stepHavingAggrClosingParens
+		case stepHavingAggrClosingParens:
+			token, leng := p.getToken()
+			if len(token) != 1 || token != ")" {
+				return p.query, fmt.Errorf("at Having : expected closing parens")
+			}
+			p.pop(leng)
+			p.step = stepHavingOperator
+		case stepHavingOperator:
+			token, leng := p.getToken()
+			currentCondition := p.query.HavingConditions[len(p.query.HavingConditions)-1]
+			switch token {
+			case "=":
+				currentCondition.Operator = Eq
+			case ">":
+				currentCondition.Operator = Gt
+			case ">=":
+				currentCondition.Operator = Gte
+			case "<":
+				currentCondition.Operator = Lt
+			case "<=":
+				currentCondition.Operator = Lte
+			case "!=":
+				currentCondition.Operator = Ne
+			default:
+				return p.query, fmt.Errorf("at WHERE: unknown operator")
+			}
+			p.query.HavingConditions[len(p.query.HavingConditions)-1] = currentCondition
+			p.pop(leng)
+			p.step = stepHavingValue
+		case stepHavingValue:
+			currentCondition := p.query.HavingConditions[len(p.query.HavingConditions)-1]
+			token, leng := p.getNumber()
+			if !isNumber(token) || leng == 0 {
+				return p.query, fmt.Errorf("at Having : expected value")
+			}
+			currentCondition.Operand2 = token
+			p.query.HavingConditions[len(p.query.HavingConditions)-1] = currentCondition
+			p.pop(leng)
+			token, _ = p.getToken()
+			if token == "AND" {
+				p.step = stepHavingAnd
+			} else if token == "OR" {
+				p.step = stepHavingOr
+			} else if token != "" {
+				return p.query, fmt.Errorf("At HAVING : expected AND/OR")
+			}
+		case stepHavingAnd:
+			token, leng := p.getToken()
+			if strings.ToUpper(token) != "AND" {
+				return p.query, fmt.Errorf(" At HAVING : expected AND/OR")
+			}
+			p.query.HavingConditionsOperators = append(p.query.HavingConditionsOperators, "AND")
+			p.pop(leng)
+			p.step = stepHavingAggregateFunc
+		case stepHavingOr:
+			token, leng := p.getToken()
+			if strings.ToUpper(token) != "OR" {
+				return p.query, fmt.Errorf("At HAVING : expected AND/OR")
+			}
+			p.query.HavingConditionsOperators = append(p.query.HavingConditionsOperators, "OR")
+			p.pop(leng)
+			p.step = stepHavingAggregateFunc
 		case stepInsertFieldsOpeningParens:
 			token, leng := p.getToken()
 			if len(token) != 1 || token != "(" {
@@ -404,6 +502,15 @@ func (p *parser) peekIdentifierWithLength() (string, int) {
 	return p.sql[p.i:], len(p.sql[p.i:])
 }
 
+func (p *parser) getNumber() (string, int) {
+	for i := p.i; i < len(p.sql); i++ {
+		if matched, _ := regexp.MatchString(`[+-]?([0-9]*[.])?[0-9]+`, string(p.sql[i])); !matched {
+			return p.sql[p.i:i], len(p.sql[p.i:i])
+		}
+	}
+	return p.sql[p.i:], len(p.sql[p.i:])
+}
+
 func (p *parser) getValueWithLength() (string, int) {
 	if len(p.sql) < p.i || p.sql[p.i] != '\'' {
 		return "", 0
@@ -431,10 +538,6 @@ func (p *parser) getAggToken() (string, int) {
 }
 
 func (p *parser) pop(i int) {
-	// if p.i >= len(p.sql) {
-	// 	return
-	// }
-
 	p.i = p.i + i
 
 	for ; p.i < len(p.sql) && p.sql[p.i] == ' '; p.i++ {
@@ -457,6 +560,9 @@ func (p *parser) validate() error {
 	}
 	if len(p.query.Conditions) == 0 && (p.query.Type == Update || p.query.Type == Delete) {
 		return fmt.Errorf("at WHERE: WHERE clause is mandatory for UPDATE & DELETE")
+	}
+	if p.step == stepHavingAggregateFunc && len(p.query.HavingConditions) == 0 {
+		return fmt.Errorf("at HAVING: Expected condition , found none")
 	}
 	for _, c := range p.query.Conditions {
 		if c.Operator == UnknownOperator {
@@ -498,6 +604,16 @@ func isIdentifier(s string) bool {
 		}
 	}
 	matched, _ := regexp.MatchString("[a-zA-Z_][a-zA-Z_0-9]*", s)
+	return matched
+}
+
+func isNumber(s string) bool {
+	for _, rw := range reservedWords {
+		if strings.ToUpper(s) == rw {
+			return false
+		}
+	}
+	matched, _ := regexp.MatchString("[+-]?([0-9]*[.])?[0-9]+", s)
 	return matched
 }
 

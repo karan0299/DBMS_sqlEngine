@@ -6,15 +6,17 @@ package parser
 // where condition 1 , conditon 2 , ______
 // Query represents a parsed query
 type Query struct {
-	Type               Type
-	TableName          string
-	Conditions         []Condition
-	Updates            map[string]string
-	Inserts            [][]string
-	Fields             []string // Used for SELECT (i.e. SELECTed field names) and INSERT (INSERTEDed field names)
-	ConditionOperators []string //AND or OR
-	AggregateFunc      map[string]string
-	GroupByField       []string
+	Type                      Type
+	TableName                 string
+	Conditions                []Condition
+	Updates                   map[string]string
+	Inserts                   [][]string
+	Fields                    []string // Used for SELECT (i.e. SELECTed field names) and INSERT (INSERTEDed field names)
+	ConditionOperators        []string //AND or OR between two conditions // e.g if WHERE condition1 AND condition2 OR condition3 , then this array is ["AND","OR"]
+	AggregateFunc             map[string]string
+	GroupByField              []string
+	HavingConditions          []HavingCondition
+	HavingConditionsOperators []string //AND or OR
 }
 
 // Type is the type of SQL query, e.g. SELECT/UPDATE
@@ -85,4 +87,16 @@ type Condition struct {
 	Operand2 string
 	// Operand2IsField determines if Operand2 is a literal or a field name
 	Operand2IsField bool
+}
+
+// HavingCondition is a single boolean condition in a Having clause
+type HavingCondition struct {
+	// OperandField1 is the left hand side operand
+	OperandField1 string
+	// OperandAggFunc defines the aggregate function on OperandField1
+	OperandAggFunc string
+	// Operand1IsField determines if Operand1 is a literal or a field name
+	Operator Operator
+	// Operand2 is the right hand side operand . Here it is defined as string but it will be a interger or floating
+	Operand2 string
 }
