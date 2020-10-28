@@ -2,33 +2,37 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"sqlengine/parser"
 )
 
 func main() {
-	st := "SELECT COUNT(p) , q,r FROM table1 WHERE p = q AND p != 'q' GROUP BY q , p"
+	//st := "SELECT field1, field2, field3 FROM table1"
 	scanner := bufio.NewScanner(os.Stdin)
-	q, err := parser.Parse(st)
+	//q, err := parser.Parse(st)
 	// if err == nil {
-	// 	fmt.Println(q)
+	//fmt.Println(q)
 	// }
 	// database := "database1"
-	database := NewDatabase("database1")
-	database.AddTable(q)
+	database := getDatabase("database1")
+	fmt.Println(database.tables)
+	//database.AddTable(q)
 	// fmt.Println(database)
 	for scanner.Scan() {
-		st = scanner.Text()
+		st := scanner.Text()
 		// fmt.Println()
 		if st == "exit" {
 			break
 		}
-		q, err = parser.Parse(st)
+		q, err := parser.Parse(st)
 		// fmt.Println(q)
 		if err == nil {
 			// fmt.Println(q)
 			database.executeQuery(q)
 		}
-		// fmt.Println()
 	}
+
+	//stores the given database
+	store(database)
 }
