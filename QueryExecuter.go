@@ -9,6 +9,8 @@ func (d *Database) executeQuery(q parser.Query) {
 	switch q.Type {
 	case 1:
 		d.selectExecuter(q, d.tables[q.TableName])
+	case 2:
+		d.updateExecuter(q, d.tables[q.TableName])
 	case 3:
 		d.insertExecuter(q, d.tables[q.TableName])
 	case 4:
@@ -87,6 +89,28 @@ func (d *Database) selectExecuter(q parser.Query, t *Table) {
 }
 func (d *Database) insertExecuter(q parser.Query, t *Table) {
 	t.addRow(q.Inserts, q.Fields)
+}
+func (d *Database) updateExecuter(q parser.Query, t *Table) {
+	for current := t.rowhead; current != nil; current = current.next {
+		var satisfied bool = true
+		for i := 0; i < len(q.Conditions); i++ {
+			if i == 0 {
+				satisfied = (satisfied && t.checkCondition(q.Conditions[i], current))
+			} else {
+				if q.ConditionOperators[i-1] == "AND" {
+					satisfied = satisfied && t.checkCondition(q.Conditions[i], current)
+				} else {
+					satisfied = satisfied || t.checkCondition(q.Conditions[i], current)
+				}
+			}
+
+		}
+		if satisfied {
+			for field, value := range q.Updates {
+				current.data[t.index[field]-1] = value
+			}
+		}
+	}
 }
 func (d *Database) deleteExecuter(q parser.Query, t *Table) {
 	var newRowHead *Row
