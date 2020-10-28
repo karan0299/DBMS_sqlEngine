@@ -11,6 +11,8 @@ func (d *Database) executeQuery(q parser.Query) {
 		d.selectExecuter(q, d.tables[q.TableName])
 	case 3:
 		d.insertExecuter(q, d.tables[q.TableName])
+	case 4:
+		d.deleteExecuter(q, d.tables[q.TableName])
 	case 5:
 		d.AddTable(q)
 	default:
@@ -85,4 +87,37 @@ func (d *Database) selectExecuter(q parser.Query, t *Table) {
 }
 func (d *Database) insertExecuter(q parser.Query, t *Table) {
 	t.addRow(q.Inserts, q.Fields)
+}
+func (d *Database) deleteExecuter(q parser.Query, t *Table) {
+	var newRowHead *Row
+	var newRowTail *Row
+	newRowHead = nil
+	newRowTail = nil
+	for current := t.rowhead; current != nil; current = current.next {
+		var satisfied bool = false
+		for i := 0; i < len(q.Conditions); i++ {
+			if i == 0 {
+				satisfied = (satisfied || t.checkCondition(q.Conditions[i], current))
+			} else {
+				if q.ConditionOperators[i-1] == "AND" {
+					satisfied = satisfied && t.checkCondition(q.Conditions[i], current)
+				} else {
+					satisfied = satisfied || t.checkCondition(q.Conditions[i], current)
+				}
+			}
+
+		}
+		if !satisfied {
+			if newRowHead == nil {
+				newRowHead = current
+				newRowTail = current
+			} else {
+				newRowTail.next = current
+				newRowTail = newRowTail.next
+			}
+		}
+	}
+	newRowTail.next = nil
+	t.rowhead = newRowHead
+	t.rowtail = newRowTail
 }
