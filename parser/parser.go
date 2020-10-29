@@ -262,7 +262,7 @@ func (p *parser) doParse() (Query, error) {
 				p.step = stepWhereOr
 			} else if token == "GROUP BY" && p.query.Type == 1 {
 				p.step = stepSelectGroupBy
-			} else if token != "GROUP BY" && p.query.Type != 1 {
+			} else if token == "GROUP BY" && p.query.Type != 1 {
 				return p.query, fmt.Errorf("At GROUP BY : GROUP BY clause is used only with SELECT CLAUSE")
 			} else if token != "" {
 				return p.query, fmt.Errorf("expected AND/OR/Group By")
