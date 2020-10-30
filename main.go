@@ -20,8 +20,8 @@ func main() {
 	//database.AddTable(q)
 	// fmt.Println(database)
 	for scanner.Scan() {
-		st := scanner.Text()
-		// fmt.Println()
+		st = scanner.Text()
+		fmt.Println()
 		if st == "exit" {
 			break
 		}

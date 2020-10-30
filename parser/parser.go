@@ -44,7 +44,7 @@ func (p *parser) doParse() (Query, error) {
 				p.query.Type = Select
 				p.pop(leng)
 				p.step = stepAggregateFunc
-				p.query.AggregateFunc = map[string]string{}
+				p.query.AggregateFunc = map[string][]string{}
 			case "INSERT INTO":
 				p.query.Type = Insert
 				p.pop(leng)
@@ -84,7 +84,7 @@ func (p *parser) doParse() (Query, error) {
 				return p.query, fmt.Errorf("at SELECT: expected field to SELECT")
 			}
 			p.query.Fields = append(p.query.Fields, identifier)
-			p.query.AggregateFunc[p.nextAggFunc] = identifier
+			p.query.AggregateFunc[p.nextAggFunc] = append(p.query.AggregateFunc[p.nextAggFunc], identifier)
 			p.pop(leng)
 			p.step = stepSelectAggrClosingParens
 		case stepSelectAggrClosingParens:
@@ -262,7 +262,7 @@ func (p *parser) doParse() (Query, error) {
 				p.step = stepWhereOr
 			} else if token == "GROUP BY" && p.query.Type == 1 {
 				p.step = stepSelectGroupBy
-			} else if token != "GROUP BY" && p.query.Type != 1 {
+			} else if token == "GROUP BY" && p.query.Type != 1 {
 				return p.query, fmt.Errorf("At GROUP BY : GROUP BY clause is used only with SELECT CLAUSE")
 			} else if token != "" {
 				return p.query, fmt.Errorf("expected AND/OR/Group By")
