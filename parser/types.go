@@ -66,11 +66,12 @@ const (
 	stepHavingValue
 	stepHavingAnd
 	stepHavingOr
+	stepDropTable
 )
 
 var reservedWords = []string{
 	"(", ")", ">=", "<=", "!=", ",", "=", ">", "<", "SELECT", "INSERT INTO", "VALUES", "UPDATE", "DELETE FROM",
-	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY", "HAVING",
+	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY", "HAVING", "DROP TABLE",
 }
 
 var aggFunc = []string{
@@ -80,7 +81,8 @@ var aggFunc = []string{
 type schemaStep int
 
 const (
-	stepCreate schemaStep = iota
+	stepZero schemaStep = iota
+	stepCreate
 	stepCreateTable
 	stepTableName
 	stepCreateOpenParens
@@ -92,6 +94,9 @@ const (
 	stepColumnComma
 	stepCreateCloseParens
 	stepEnd
+	stepDatabaseName
+	stepUseDatabase
+	stepUseDb
 )
 
 var dataTypes = []string{
@@ -99,5 +104,5 @@ var dataTypes = []string{
 }
 
 var schemaReserveWords = []string{
-	"CREATE", "TABLE", "create", "table", "(", ")", ",",
+	"CREATE", "TABLE", "create", "table", "(", ")", ",", "DATABASE", "USE",
 }

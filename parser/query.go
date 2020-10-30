@@ -33,6 +33,8 @@ const (
 	Insert
 	// Delete represents a DELETE query
 	Delete
+	// Drop Table
+	Drop
 )
 
 // TypeString is a string slice with the names of all types in order
@@ -42,6 +44,7 @@ var TypeString = []string{
 	"Update",
 	"Insert",
 	"Delete",
+	"Drop",
 }
 
 // Operator is between operands in a condition

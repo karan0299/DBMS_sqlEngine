@@ -58,6 +58,10 @@ func (p *parser) doParse() (Query, error) {
 				p.query.Type = Delete
 				p.pop(leng)
 				p.step = stepDeleteFromTable
+			case "DROP TABLE":
+				p.query.Type = Drop
+				p.pop(leng)
+				p.step = stepDropTable
 			default:
 				return p.query, fmt.Errorf("invalid query type")
 
@@ -469,6 +473,13 @@ func (p *parser) doParse() (Query, error) {
 			}
 			p.pop(leng)
 			p.step = stepInsertValuesOpeningParens
+		case stepDropTable:
+			token, leng := p.getToken()
+			if !isIdentifier(token) {
+				return p.query, fmt.Errorf("at DROP : expected identifier")
+			}
+			p.query.TableName = token
+			p.pop(leng)
 		}
 	}
 }

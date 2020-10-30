@@ -12,7 +12,7 @@ func SchemaParse(sqlq string) (Schema, error) {
 	parserobj := &schemaParser{
 		i:      0,
 		sql:    sqlq,
-		step:   stepCreate,
+		step:   stepZero,
 		schema: Schema{},
 		err:    nil,
 	}
@@ -38,8 +38,33 @@ func (p *schemaParser) doParse() (Schema, error) {
 			return p.schema, p.err
 		}
 		switch p.step {
+		case stepZero:
+			token, _ := p.getToken()
+			if strings.ToUpper(token) == "USE" {
+				p.step = stepUseDb
+			} else if strings.ToUpper(token) == "CREATE" {
+				p.step = stepCreate
+			} else {
+				return p.schema, fmt.Errorf("Expected CREATE/USE : found %s", token)
+			}
+		case stepUseDb:
+			token, leng := p.getToken()
+			if strings.ToUpper(token) != "USE" {
+				return p.schema, fmt.Errorf("Expected USE: found %s", token)
+			}
+			p.schema.Use = true
+			p.pop(leng)
+			p.step = stepUseDatabase
+		case stepUseDatabase:
+			token, leng := p.getToken()
+			if strings.ToUpper(token) != "DATABASE" {
+				return p.schema, fmt.Errorf("At USE: expected DATABASE found %s", token)
+			}
+			p.pop(leng)
+			p.step = stepDatabaseName
 		case stepCreate:
 			token, leng := p.getToken()
+			fmt.Println(token)
 			if strings.ToUpper(token) != "CREATE" {
 				return p.schema, fmt.Errorf("Expected CREATE: found %s", token)
 			}
@@ -47,21 +72,39 @@ func (p *schemaParser) doParse() (Schema, error) {
 			p.step = stepCreateTable
 		case stepCreateTable:
 			token, leng := p.getToken()
-			if strings.ToUpper(token) != "TABLE" {
-				return p.schema, fmt.Errorf("at CREATE : Expected TABLE , found %s", token)
+			if strings.ToUpper(token) == "DATABASE" {
+				p.step = stepDatabaseName
+				p.schema.TableOrDB = "DB"
+			} else if strings.ToUpper(token) == "TABLE" {
+				p.schema.TableOrDB = "Table"
+				p.step = stepTableName
+			} else {
+				return p.schema, fmt.Errorf("at CREATE : Expected TABLE / DATABASE , found %s", token)
 			}
 			p.pop(leng)
-			p.step = stepTableName
+		case stepDatabaseName:
+			token, leng := p.getToken()
+			if !p.isIdentifier(token) || leng == 0 {
+				return p.schema, fmt.Errorf("at CREATE : Expected Database name string ")
+			}
+			p.pop(leng)
+			p.schema.Name = token
+			p.step = stepEnd
+			if token, _ := p.getToken(); token != "" {
+				return p.schema, fmt.Errorf("at CREATE: expected no token but found %s", token)
+			}
 		case stepTableName:
 			token, leng := p.getToken()
+			fmt.Println(token)
 			if !p.isIdentifier(token) || leng == 0 {
 				return p.schema, fmt.Errorf("at CREATE : Expected table name string ")
 			}
 			p.pop(leng)
-			p.schema.TableName = token
+			p.schema.Name = token
 			p.step = stepCreateOpenParens
 		case stepCreateOpenParens:
 			token, leng := p.getToken()
+			fmt.Println(token)
 			if len(token) != 1 || token != "(" {
 				return p.schema, fmt.Errorf("at CREATE : expected opening parenthesis")
 			}
@@ -69,6 +112,7 @@ func (p *schemaParser) doParse() (Schema, error) {
 			p.step = stepTableColumn
 		case stepTableColumn:
 			identifier, leng := p.getToken()
+			fmt.Println(identifier)
 			if !p.isIdentifier(identifier) {
 				return p.schema, fmt.Errorf("at CREATE: expected field to create")
 			}

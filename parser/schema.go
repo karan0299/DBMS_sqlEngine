@@ -7,6 +7,8 @@ type DataType struct {
 
 // Schema represents a parsed schema query
 type Schema struct {
-	TableName string
+	Use       bool
+	TableOrDB string
+	Name      string
 	Columns   map[string]DataType
 }
