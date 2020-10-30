@@ -92,27 +92,24 @@ func main() {
 	// 		database.executeQuery(q)
 	// 	}
 	// }
-<<<<<<< HEAD
 	// database := "database1"
-	database := getDatabase("database1")
-	fmt.Println(database.tables)
-	//database.AddTable(q)
-	// fmt.Println(database)
-	for scanner.Scan() {
-		st = scanner.Text()
-		fmt.Println()
-		if st == "exit" {
-			break
-		}
-		q, err := parser.Parse(st)
-		// fmt.Println(q)
-		if err == nil {
-			// fmt.Println(q)
-			database.executeQuery(q)
-		}
-	}
-=======
->>>>>>> COMPLETE SERVER OPERATION EXPECT SENDING DATA IN ROWS AND COLS
+	// database := getDatabase("database1")
+	// fmt.Println(database.tables)
+	// //database.AddTable(q)
+	// // fmt.Println(database)
+	// for scanner.Scan() {
+	// 	st = scanner.Text()
+	// 	fmt.Println()
+	// 	if st == "exit" {
+	// 		break
+	// 	}
+	// 	q, err := parser.Parse(st)
+	// 	// fmt.Println(q)
+	// 	if err == nil {
+	// 		// fmt.Println(q)
+	// 		database.executeQuery(q)
+	// 	}
+	// }
 
 	// // stores the given database
 	// store(database)
