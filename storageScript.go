@@ -22,17 +22,18 @@ func exists(path string) (bool, error) {
 	return false, err
 }
 
-func getDatabase(name string) *Database {
+func getDatabase(name string) (*Database, error) {
 	e, err := exists("./Databases/" + name)
 	if err == nil {
 		if !e {
-			fmt.Println("doentexist")
-			return NewDatabase(name)
+			fmt.Println("doesnt exist")
+			err := fmt.Errorf("Database does not exist")
+			return NewDatabase(name), err
 		}
 		files, err := ioutil.ReadDir("./Databases/" + name)
 		if err != nil {
 			fmt.Println(err)
-			return nil
+			return nil, err
 		}
 
 		database := NewDatabase(name)
@@ -40,6 +41,7 @@ func getDatabase(name string) *Database {
 			csvFile, err := os.Open("./Databases/" + name + "/" + f.Name())
 			if err != nil {
 				fmt.Println(err)
+				return database, err
 			}
 			fmt.Println("Successfully Opened CSV file")
 			defer csvFile.Close()
@@ -47,6 +49,7 @@ func getDatabase(name string) *Database {
 			csvLines, err := csv.NewReader(csvFile).ReadAll()
 			if err != nil {
 				fmt.Println(err)
+				return database, err
 			}
 			var cnt int = 0
 			fields := []string{}
@@ -70,6 +73,7 @@ func getDatabase(name string) *Database {
 						database.AddTable(q)
 					} else {
 						fmt.Println(err)
+						return database, err
 					}
 					cnt = cnt + 1
 				} else {
@@ -78,24 +82,24 @@ func getDatabase(name string) *Database {
 			}
 
 		}
-		return database
+		return database, nil
 
 	}
 	fmt.Println(err)
-	return nil
+	return nil, err
 
 }
 
-func store(database *Database) {
+func store(database *Database) error {
 
 	e, err := exists("./Databases/" + database.name)
 	if err == nil {
 		if !e {
-			os.Mkdir("./Databases/"+database.name, os.ModeDir)
+			os.Mkdir("./Databases/"+database.name, 0775)
 		}
 	} else {
 		fmt.Println(err)
-		return
+		return err
 	}
 	for tableName, tableAddress := range database.tables {
 		e, err = exists("./Databases/" + database.name + "/" + tableName)
@@ -103,6 +107,7 @@ func store(database *Database) {
 			csvFile, err := os.Create("./Databases/" + database.name + "/" + tableName + ".csv")
 			if err != nil {
 				log.Fatalf("failed creating file: %s", err)
+				return err
 			}
 
 			csvwriter := csv.NewWriter(csvFile)
@@ -122,7 +127,8 @@ func store(database *Database) {
 			csvFile.Close()
 		} else {
 			fmt.Println(err)
-			return
+			return err
 		}
 	}
+	return nil
 }

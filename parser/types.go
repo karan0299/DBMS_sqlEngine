@@ -10,6 +10,16 @@ type parser struct {
 	nextAggFunc     string
 }
 
+type schemaParser struct {
+	i               int
+	sql             string
+	schema          Schema
+	err             error
+	step            schemaStep
+	currentField    string
+	currentDataType DataType
+}
+
 type step int
 
 const (
@@ -56,13 +66,43 @@ const (
 	stepHavingValue
 	stepHavingAnd
 	stepHavingOr
+	stepDropTable
 )
 
 var reservedWords = []string{
 	"(", ")", ">=", "<=", "!=", ",", "=", ">", "<", "SELECT", "INSERT INTO", "VALUES", "UPDATE", "DELETE FROM",
-	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY", "HAVING",
+	"WHERE", "FROM", "SET", "AND", "OR", "GROUP BY", "HAVING", "DROP TABLE",
 }
 
 var aggFunc = []string{
 	"COUNT", "AVG", "SUM",
+}
+
+type schemaStep int
+
+const (
+	stepZero schemaStep = iota
+	stepCreate
+	stepCreateTable
+	stepTableName
+	stepCreateOpenParens
+	stepTableColumn
+	stepColumnType
+	stepColumnTypeOpenParens
+	stepColumnTypeSize
+	stepColumnTypeCloseParens
+	stepColumnComma
+	stepCreateCloseParens
+	stepEnd
+	stepDatabaseName
+	stepUseDatabase
+	stepUseDb
+)
+
+var dataTypes = []string{
+	"int", "varchar", "char", "boolean",
+}
+
+var schemaReserveWords = []string{
+	"CREATE", "TABLE", "create", "table", "(", ")", ",", "DATABASE", "USE",
 }
