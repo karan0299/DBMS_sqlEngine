@@ -10,6 +10,16 @@ type parser struct {
 	nextAggFunc     string
 }
 
+type schemaParser struct {
+	i               int
+	sql             string
+	schema          Schema
+	err             error
+	step            schemaStep
+	currentField    string
+	currentDataType DataType
+}
+
 type step int
 
 const (
@@ -65,4 +75,29 @@ var reservedWords = []string{
 
 var aggFunc = []string{
 	"COUNT", "AVG", "SUM",
+}
+
+type schemaStep int
+
+const (
+	stepCreate schemaStep = iota
+	stepCreateTable
+	stepTableName
+	stepCreateOpenParens
+	stepTableColumn
+	stepColumnType
+	stepColumnTypeOpenParens
+	stepColumnTypeSize
+	stepColumnTypeCloseParens
+	stepColumnComma
+	stepCreateCloseParens
+	stepEnd
+)
+
+var dataTypes = []string{
+	"int", "varchar", "char", "boolean",
+}
+
+var schemaReserveWords = []string{
+	"CREATE", "TABLE", "create", "table", "(", ")", ",",
 }
