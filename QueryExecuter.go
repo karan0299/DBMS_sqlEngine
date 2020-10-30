@@ -5,6 +5,14 @@ import (
 	"sqlengine/parser"
 )
 
+type mapKey struct {
+	groupByFields string
+}
+type mapValue struct {
+	count  int
+	rowptr *Row
+}
+
 func (d *Database) executeQuery(q parser.Query) {
 	switch q.Type {
 	case 1:
@@ -58,7 +66,7 @@ func (d *Database) selectExecuter(q parser.Query, t *Table) {
 	if q.Fields[0] == "*" {
 		q.Fields = t.columns
 	}
-	if len(q.AggregateFunc) == 0 {
+	if len(q.GroupByField) == 0 {
 		t1 := d.makeTable(q)
 		for current := t.rowhead; current != nil; current = current.next {
 			var satisfied bool = true
@@ -79,9 +87,59 @@ func (d *Database) selectExecuter(q parser.Query, t *Table) {
 				for j := 0; j < len(q.Fields); j++ {
 					data = append(data, current.data[t.index[q.Fields[j]]-1])
 				}
-				t1.addSingleRow(data, t1.columns)
+				t1.addSingleRowNoGroupBy(data, t1.columns)
 			}
 		}
+		d.printTable(t1)
+
+	} else {
+		t1 := d.makeTableAggFunc(q)
+		mpKey := mapKey{
+			groupByFields: "(",
+		}
+		mpValue := mapValue{
+			count:  0,
+			rowptr: nil,
+		}
+		mp := map[mapKey]mapValue{}
+		for current := t.rowhead; current != nil; current = current.next {
+			var satisfied bool = true
+			for i := 0; i < len(q.Conditions); i++ {
+				if i == 0 {
+					satisfied = (satisfied && t.checkCondition(q.Conditions[i], current))
+				} else {
+					if q.ConditionOperators[i-1] == "AND" {
+						satisfied = satisfied && t.checkCondition(q.Conditions[i], current)
+					} else {
+						satisfied = satisfied || t.checkCondition(q.Conditions[i], current)
+					}
+				}
+
+			}
+			if satisfied {
+				mpKey.groupByFields = "("
+				for i := 0; i < len(q.GroupByField); i++ {
+					mpKey.groupByFields += current.data[t.index[q.GroupByField[i]]-1] + ","
+				}
+				mpKey.groupByFields += ")"
+				if mp[mpKey].count == 0 {
+					// fmt.Println("Not Found", current.data)
+					mpValue.count = 1
+					t1.addSingleRowAggFunc(current.data, t, q)
+					mpValue.rowptr = t1.rowtail
+					mp[mpKey] = mpValue
+				} else {
+					// fmt.Println("Found", current.data)
+					mpValue.count = mp[mpKey].count + 1
+					mpValue.rowptr = mp[mpKey].rowptr
+					mp[mpKey] = mpValue
+					t1.alterRowAggFunc(current.data, t, q, mpValue.rowptr, mpValue.count)
+				}
+				// fmt.Println(mp)
+				// d.printTable(t1)
+			}
+		}
+
 		d.printTable(t1)
 
 	}

@@ -13,7 +13,7 @@ type Query struct {
 	Inserts                   [][]string
 	Fields                    []string // Used for SELECT (i.e. SELECTed field names) and INSERT (INSERTEDed field names)
 	ConditionOperators        []string //AND or OR between two conditions // e.g if WHERE condition1 AND condition2 OR condition3 , then this array is ["AND","OR"]
-	AggregateFunc             map[string]string
+	AggregateFunc             map[string][]string
 	GroupByField              []string
 	HavingConditions          []HavingCondition
 	HavingConditionsOperators []string //AND or OR

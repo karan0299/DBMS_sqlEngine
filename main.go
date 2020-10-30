@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"sqlengine/parser"
 )
@@ -19,7 +20,7 @@ func main() {
 	// fmt.Println(database)
 	for scanner.Scan() {
 		st = scanner.Text()
-		// fmt.Println()
+		fmt.Println()
 		if st == "exit" {
 			break
 		}
