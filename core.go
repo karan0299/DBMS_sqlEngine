@@ -19,10 +19,19 @@ var (
 	//ErrUnexpectedRowLength is thrown when the obtained row has more columns than the schema
 	ErrUnexpectedRowLength = errors.NewKind("expected %d values, got %d")
 
+	//Wrong Query error
+	ErrWrongQuery = errors.NewKind("Wrong Query")
+
 	// ErrInvalidChildrenNumber is returned when the WithChildren method of a
 	// node or expression is called with an invalid number of arguments.
 	ErrInvalidChildrenNumber = errors.NewKind("%T: invalid children number, got %d, expected %d")
 
 	// ErrDeleteRowNotFound
 	ErrDeleteRowNotFound = errors.NewKind("row was not found when attempting to delete").New()
+
+	//ErrColumnNotFound
+	ErrColumnNotFound = errors.NewKind("%s is not a field in this table")
+
+	//ErrNonNumericValue
+	ErrNonNumericValue = errors.NewKind("Either the column you chose or the value you entered has non numeric characters")
 )

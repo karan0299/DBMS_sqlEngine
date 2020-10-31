@@ -11,7 +11,7 @@ type Row struct {
 	next *Row
 }
 
-func (t *Table) addSingleRow(data []string, Fields []string) {
+func (t *Table) addSingleRow(data []string, Fields []string) error {
 	if t.rowhead == nil {
 		t.rowhead = &Row{
 			data: make([]string, len(t.columns)),
@@ -29,9 +29,12 @@ func (t *Table) addSingleRow(data []string, Fields []string) {
 	// 	t.rowhead.data[i] = "NULL"
 	// }
 	for i := 0; i < len(Fields); i++ {
+		if t.index[Fields[i]] == 0 {
+			return ErrColumnNotFound.New(Fields[i])
+		}
 		t.rowtail.data[t.index[Fields[i]]-1] = data[i]
 	}
-
+	return nil
 }
 func (t *Table) addSingleRowNoGroupBy(data []string, Fields []string) {
 	if t.rowhead == nil {
@@ -55,7 +58,7 @@ func (t *Table) addSingleRowNoGroupBy(data []string, Fields []string) {
 	}
 
 }
-func (t *Table) addSingleRowAggFunc(data []string, t1 *Table, q parser.Query) {
+func (t *Table) addSingleRowAggFunc(data []string, t1 *Table, q parser.Query) error {
 	if t.rowhead == nil {
 		t.rowhead = &Row{
 			data: make([]string, len(t.columns)),
@@ -82,14 +85,23 @@ func (t *Table) addSingleRowAggFunc(data []string, t1 *Table, q parser.Query) {
 	// 	}
 	// }
 	for k := 0; k < len(q.AggregateFunc["COUNT"]); k++ {
+		if t1.index[q.AggregateFunc["COUNT"][k]] == 0 {
+			return ErrColumnNotFound.New(q.AggregateFunc["COUNT"][k])
+		}
 		t.rowtail.data[j] = "1"
 		j++
 	}
 	for k := 0; k < len(q.AggregateFunc["SUM"]); k++ {
+		if t1.index[q.AggregateFunc["SUM"][k]] == 0 {
+			return ErrColumnNotFound.New(q.AggregateFunc["SUM"][k])
+		}
 		t.rowtail.data[j] = data[t1.index[q.AggregateFunc["SUM"][k]]-1]
 		j++
 	}
 	for k := 0; k < len(q.AggregateFunc["AVG"]); k++ {
+		if t1.index[q.AggregateFunc["AVG"][k]] == 0 {
+			return ErrColumnNotFound.New(q.AggregateFunc["AVG"][k])
+		}
 		t.rowtail.data[j] = data[t1.index[q.AggregateFunc["AVG"][k]]-1]
 		j++
 	}
@@ -112,15 +124,18 @@ func (t *Table) addSingleRowAggFunc(data []string, t1 *Table, q parser.Query) {
 	// fmt.Println(j)
 	// fmt.Println(t.rowhead.data)
 	for j < len(t.columns) {
+		if t1.index[t.columns[j]] == 0 {
+			return ErrColumnNotFound.New(t.columns[j])
+		}
 		t.rowtail.data[j] = data[t1.index[t.columns[j]]-1]
 		j++
 	}
 	// fmt.Println("F table data", data)
 	// fmt.Println("F outpu data", t.rowtail.data)
 	// }
-
+	return nil
 }
-func (t *Table) alterRowAggFunc(data []string, t1 *Table, q parser.Query, rowptr *Row, count int) {
+func (t *Table) alterRowAggFunc(data []string, t1 *Table, q parser.Query, rowptr *Row, count int) error {
 	j := 0
 
 	for k := 0; k < len(q.AggregateFunc["COUNT"]); k++ {
@@ -128,6 +143,8 @@ func (t *Table) alterRowAggFunc(data []string, t1 *Table, q parser.Query, rowptr
 		if err == nil {
 			a = a + 1
 			rowptr.data[j] = strconv.FormatInt(a, 10)
+		} else {
+			return ErrNonNumericValue.New()
 		}
 		j++
 	}
@@ -139,8 +156,10 @@ func (t *Table) alterRowAggFunc(data []string, t1 *Table, q parser.Query, rowptr
 				a = a + b
 				rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
 			} else {
-				fmt.Println("This field has non numeric values") //Put error
+				return ErrNonNumericValue.New()
 			}
+		} else {
+			return ErrNonNumericValue.New()
 		}
 		j++
 	}
@@ -154,61 +173,69 @@ func (t *Table) alterRowAggFunc(data []string, t1 *Table, q parser.Query, rowptr
 				a = a / float64(count)
 				rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
 			} else {
-				fmt.Println("This field has non numeric values") //Put error
+				return ErrNonNumericValue.New()
 			}
+		} else {
+			return ErrNonNumericValue.New()
 		}
 		j++
 	}
-
-	// for FUNC, FIELDS := range q.AggregateFunc {
-	// 	for k := 0; k < len(FIELDS); k++ {
-	// 		switch FUNC {
-	// 		case "COUNT":
-	// 			a, err := strconv.ParseFloat(rowptr.data[j], 64)
-	// 			if err == nil {
-	// 				a = a + 1
-	// 				rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
-	// 			}
-	// 		case "SUM":
-	// 			a, err := strconv.ParseFloat(rowptr.data[j], 64)
-	// 			if err == nil {
-	// 				b, err1 := strconv.ParseFloat(data[t1.index[FIELDS[k]]-1], 64)
-	// 				if err1 == nil {
-	// 					a = a + b
-	// 					rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
-	// 				} else {
-	// 					fmt.Println("This field has non numeric values") //Put error
-	// 				}
-	// 			}
-
-	// 		case "AVG":
-
-	// 			a, err := strconv.ParseFloat(rowptr.data[j], 64)
-	// 			a = a * float64((count - 1))
-	// 			if err == nil {
-	// 				b, err1 := strconv.ParseFloat(data[t1.index[FIELDS[k]]-1], 64)
-	// 				if err1 == nil {
-	// 					a = a + b
-	// 					a = a / float64(count)
-	// 					rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
-	// 				} else {
-	// 					fmt.Println("This field has non numeric values") //Put error
-	// 				}
-	// 			}
-
-	// 		}
-	// 		fmt.Println("table data", data)
-	// 		fmt.Println("outpu data", rowptr.data)
-	// 		j++
-	// 	}
-
-	// }
-	// fmt.Println()
+	return nil
 }
-func (t *Table) addRow(Inserts [][]string, Fields []string) {
+
+// for FUNC, FIELDS := range q.AggregateFunc {
+// 	for k := 0; k < len(FIELDS); k++ {
+// 		switch FUNC {
+// 		case "COUNT":
+// 			a, err := strconv.ParseFloat(rowptr.data[j], 64)
+// 			if err == nil {
+// 				a = a + 1
+// 				rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
+// 			}
+// 		case "SUM":
+// 			a, err := strconv.ParseFloat(rowptr.data[j], 64)
+// 			if err == nil {
+// 				b, err1 := strconv.ParseFloat(data[t1.index[FIELDS[k]]-1], 64)
+// 				if err1 == nil {
+// 					a = a + b
+// 					rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
+// 				} else {
+// 					fmt.Println("This field has non numeric values") //Put error
+// 				}
+// 			}
+
+// 		case "AVG":
+
+// 			a, err := strconv.ParseFloat(rowptr.data[j], 64)
+// 			a = a * float64((count - 1))
+// 			if err == nil {
+// 				b, err1 := strconv.ParseFloat(data[t1.index[FIELDS[k]]-1], 64)
+// 				if err1 == nil {
+// 					a = a + b
+// 					a = a / float64(count)
+// 					rowptr.data[j] = strconv.FormatFloat(a, 'f', 3, 64)
+// 				} else {
+// 					fmt.Println("This field has non numeric values") //Put error
+// 				}
+// 			}
+
+// 		}
+// 		fmt.Println("table data", data)
+// 		fmt.Println("outpu data", rowptr.data)
+// 		j++
+// 	}
+
+// }
+// fmt.Println()
+// }
+func (t *Table) addRow(Inserts [][]string, Fields []string) error {
 	for i := 0; i < len(Inserts); i++ {
-		t.addSingleRow(Inserts[i], Fields)
+		err := t.addSingleRow(Inserts[i], Fields)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 func (d *Database) makeTable(q parser.Query) *Table {
 	t := &Table{
