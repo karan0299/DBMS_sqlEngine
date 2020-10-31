@@ -292,15 +292,15 @@ func main() {
 
 	router.GET("/dbTypes", func(c *gin.Context) {
 		s := `{  "result" : [ {
-			"db_type_id" : 9,
-			"context" : "host",
-			"full_name" : "MySQL 5.6",
-			"simple_name" : "MySQL",
-			"sample_fragment" : "9/a6c585/1",
-			"batch_separator" : null,
-			"classname" : "org.gjt.mm.mysql.Driver",
-			"num_hosts" : 1
-		  }]}`
+				"db_type_id" : 9,
+				"context" : "host",
+				"full_name" : "MySQL 5.6",
+				"simple_name" : "MySQL",
+				"sample_fragment" : "9/a6c585/1",
+				"batch_separator" : null,
+				"classname" : "org.gjt.mm.mysql.Driver",
+				"num_hosts" : 1
+			  }]}`
 		data := &dbtypes{
 			Result: []dbmodel{},
 		}
