@@ -8,6 +8,8 @@ import (
 
 // Parse parses the given qury
 func Parse(sqlq string) (Query, error) {
+	sqlq = strings.ReplaceAll(sqlq, "\n", " ")
+	sqlq = strings.Trim(sqlq, " ")
 	parserobj := &parser{
 		i:               0,
 		sql:             sqlq,
@@ -207,6 +209,10 @@ func (p *parser) doParse() (Query, error) {
 			p.step = stepUpdateField
 		case stepWhere:
 			token, leng := p.getToken()
+			if token == "GROUP BY" && p.query.Type == 1 {
+				p.step = stepSelectGroupBy
+				continue
+			}
 			if strings.ToUpper(token) != "WHERE" {
 				return p.query, fmt.Errorf("expected WHERE")
 			}

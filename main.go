@@ -64,10 +64,11 @@ type rowColResult struct {
 
 type RequestData struct {
 	Sql string `json:"sql"`
+	Db  string `json:"db"`
 }
 
 func main() {
-	database := &Database{}
+	// database := &Database{}
 	// st1 := "DROP TABLE t"
 	// scanner := bufio.NewScanner(os.Stdin)
 	// // q1, err := parser.Parse(st1)
@@ -175,20 +176,117 @@ func main() {
 			return
 		}
 
+		database, _ := getDatabase(req.Db)
+
 		if q.Type == 5 {
 			err = database.DropTable(q.TableName)
 			rowcol := rowColResult{}
 			if err != nil {
-				rowcol.Cols = append(rowcol.Cols, "Drop Table : Failure due to error")
-				rowcol.Data = append(rowcol.Data, []string{err.Error()})
+				// rowcol.Cols = append(rowcol.Cols, "Drop Table : Failure due to error")
+				// rowcol.Data = append(rowcol.Data, []string{err.Error()})
+				res.Succeeded = false
+				res.Results = rowcol
+				res.ErrorMessage = err.Error()
 			} else {
 				rowcol.Cols = append(rowcol.Cols, "Drop Table")
 				rowcol.Data = append(rowcol.Data, []string{"Success"})
+				res.Succeeded = true
+				res.Results = rowcol
 			}
-			res.Results = rowcol
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		}
+
+		exec, err := database.executeQuery(q)
+		store(database)
+
+		if q.Type == 1 && err != nil {
+			res.Succeeded = false
+			res.ErrorMessage = err.Error()
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 1 && err == nil {
+			res.Results = *exec
 			res.Succeeded = true
 			data.Sets = append(data.Sets, *res)
 			fmt.Println(data.Sets)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 2 && err.Error() == "Rows updated successfully" {
+			rowcol := rowColResult{}
+			rowcol.Cols = append(rowcol.Cols, "Update Table")
+			rowcol.Data = append(rowcol.Data, []string{"Success"})
+			res.Results = rowcol
+			res.Succeeded = true
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 2 {
+			rowcol := rowColResult{}
+			res.Succeeded = false
+			res.Results = rowcol
+			res.ErrorMessage = err.Error()
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 3 && err.Error() == "Rows inserted successfully" {
+			rowcol := rowColResult{}
+			rowcol.Cols = append(rowcol.Cols, "Insert values")
+			rowcol.Data = append(rowcol.Data, []string{"Success"})
+			res.Results = rowcol
+			res.Succeeded = true
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 3 {
+			rowcol := rowColResult{}
+			res.Succeeded = false
+			res.Results = rowcol
+			res.ErrorMessage = err.Error()
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 4 && err.Error() == "Rows deleted succesfully" {
+			rowcol := rowColResult{}
+			rowcol.Cols = append(rowcol.Cols, "Delete rows")
+			rowcol.Data = append(rowcol.Data, []string{"Success"})
+			res.Results = rowcol
+			res.Succeeded = true
+			data.Sets = append(data.Sets, *res)
+			c.JSON(http.StatusOK, gin.H{
+				"ID":   123,
+				"sets": data.Sets,
+			})
+			return
+		} else if q.Type == 4 {
+			rowcol := rowColResult{}
+			res.Succeeded = false
+			res.Results = rowcol
+			res.ErrorMessage = err.Error()
+			data.Sets = append(data.Sets, *res)
 			c.JSON(http.StatusOK, gin.H{
 				"ID":   123,
 				"sets": data.Sets,
@@ -240,6 +338,7 @@ func main() {
 				})
 				return
 			}
+
 			c.JSON(http.StatusOK, gin.H{
 				"type": "createdb",
 				"msg":  "",
@@ -254,21 +353,29 @@ func main() {
 				c.JSON(http.StatusOK, gin.H{
 					"type": "usedb",
 					"msg":  "Failed to use db , either it doesnt exist or some technical error ",
+					"db":   "",
 				})
 				return
 			}
-			database = db
+			// database = db
 			c.JSON(http.StatusOK, gin.H{
 				"type": "usedb",
 				"msg":  "",
+				"db":   db.name,
 			})
 			return
 		}
+		database, _ := getDatabase(req.Db)
+
 		fmt.Println(database.name)
 
 		mapq := mapSchemaToQuery(&res)
 
-		database.AddTable(*mapq)
+		if database.Tables()[res.Name] == nil {
+			database.AddTable(*mapq)
+		}
+
+		store(database)
 
 		schemaStr := &ss{
 			TableName: res.Name,

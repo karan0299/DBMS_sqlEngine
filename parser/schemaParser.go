@@ -9,6 +9,8 @@ import (
 
 // SchemaParse parses the given schema
 func SchemaParse(sqlq string) (Schema, error) {
+	sqlq = strings.ReplaceAll(sqlq, "\n", " ")
+	sqlq = strings.Trim(sqlq, " ")
 	parserobj := &schemaParser{
 		i:      0,
 		sql:    sqlq,

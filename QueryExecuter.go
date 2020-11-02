@@ -74,6 +74,10 @@ func (t *Table) checkCondition(c parser.Condition, r *Row) (bool, error) {
 	} else {
 		val2 = c.Operand2
 	}
+
+	if c.Operator == 1 {
+		return val1 == val2, nil
+	}
 	op1, err1 := strconv.ParseFloat(val1, 64)
 	op2, err2 := strconv.ParseFloat(val2, 64)
 	if err1 != nil || err2 != nil {
